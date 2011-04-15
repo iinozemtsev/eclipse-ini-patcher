@@ -14,6 +14,19 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
 
+  <distributionManagement>
+		<repository>
+			<id>xored</id>
+			<name>Xored Maven repository</name>
+			<url>http://maven.xored.com/nexus/content/repositories/releases/</url>
+		</repository>
+		<snapshotRepository>
+			<id>xored</id>
+			<name>Xored Maven repository</name>
+			<url>http://maven.xored.com/nexus/content/repositories/snapshots/</url>
+		</snapshotRepository>
+  </distributionManagement>
+
   <dependencies>
     <dependency>
       <groupId>org.apache.maven</groupId>
