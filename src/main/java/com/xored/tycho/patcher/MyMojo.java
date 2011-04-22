@@ -41,6 +41,7 @@ public class MyMojo extends AbstractMojo {
 	 * 
 	 * @parameter expression="${project.build.directory}"
 	 * @required
+	 * 
 	 */
 	private File outputDirectory;
 
