@@ -49,21 +49,25 @@ public class MyMojo extends AbstractMojo {
 		File productsDir = new File(outputDirectory, "products");
 		for(File productFile  : productsDir.listFiles()) {
 			if(productFile.isDirectory()) {
-				patchProduct(productFile);
+				// Ideally we should use tycho project utils here to get
+				// destination directory of Mac OS X product, but for now just
+				// assume default location
+
+				// x86_64
+				final File macDir64 = new File(productFile, "macosx/cocoa/x86_64");
+				if(macDir64.exists() && macDir64.isDirectory()) {
+					patchProduct(productFile, macDir64);
+				}
+				// x86
+				final File macDir32 = new File(productFile, "macosx/cocoa/x86");
+				if(macDir32.exists() && macDir32.isDirectory()) {
+					patchProduct(productFile, macDir32);
+				}
 			}
 		}
 	}
 
-	private void patchProduct(File productDir) {
-		// Ideally we should use tycho project utils here to get
-		// destination directory of Mac OS X product, but for now just
-		// assume default location
-
-		File macDir = new File(productDir, "macosx/cocoa/x86_64");
-		if(!macDir.exists() || !macDir.isDirectory()) {
-			return;
-		}
-		
+	private void patchProduct(File productDir, File macDir) {
 		while(macDir.list().length == 1) {
 			macDir = macDir.listFiles()[0];
 		}
@@ -119,6 +123,9 @@ public class MyMojo extends AbstractMojo {
 			}
 			patched.append(contents);
 			FileUtils.fileWrite(iniFile, patched.toString());
+			if(getLog().isInfoEnabled()) {
+				getLog().info("Patched " + iniFile.getCanonicalPath());
+			}
 
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
