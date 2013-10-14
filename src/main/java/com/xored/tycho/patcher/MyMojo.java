@@ -22,9 +22,22 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathFactory;
+
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.codehaus.plexus.util.FileUtils;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 
 /**
  * Goal which modifies eclipse.ini file for Mac OS X platform.
@@ -47,20 +60,20 @@ public class MyMojo extends AbstractMojo {
 
 	public void execute() throws MojoExecutionException {
 		File productsDir = new File(outputDirectory, "products");
-		for(File productFile  : productsDir.listFiles()) {
-			if(productFile.isDirectory()) {
+		for (File productFile : productsDir.listFiles()) {
+			if (productFile.isDirectory()) {
 				// Ideally we should use tycho project utils here to get
 				// destination directory of Mac OS X product, but for now just
 				// assume default location
 
 				// x86_64
 				final File macDir64 = new File(productFile, "macosx/cocoa/x86_64");
-				if(macDir64.exists() && macDir64.isDirectory()) {
+				if (macDir64.exists() && macDir64.isDirectory()) {
 					patchProduct(productFile, macDir64);
 				}
 				// x86
 				final File macDir32 = new File(productFile, "macosx/cocoa/x86");
-				if(macDir32.exists() && macDir32.isDirectory()) {
+				if (macDir32.exists() && macDir32.isDirectory()) {
 					patchProduct(productFile, macDir32);
 				}
 			}
@@ -68,7 +81,7 @@ public class MyMojo extends AbstractMojo {
 	}
 
 	private void patchProduct(File productDir, File macDir) {
-		while(macDir.list().length == 1) {
+		while (macDir.list().length == 1) {
 			macDir = macDir.listFiles()[0];
 		}
 		File launcherFile = findLauncher(macDir);
@@ -82,17 +95,57 @@ public class MyMojo extends AbstractMojo {
 			return;
 		}
 
-
 		for (File app : getAppDirs(macDir)) {
-			File iniDir = new File(new File(app, "Contents"), "MacOS");
+			File contents = new File(app, "Contents");
+			File iniDir = new File(contents, "MacOS");
 			if (!iniDir.exists() || !iniDir.isDirectory()) {
 				continue;
 			}
 			for (File iniFile : getIniFiles(iniDir)) {
 				patchIniFile(productDir.getName(), launcherFile, launcherLib, iniFile);
 			}
+			patchInfoPListFile(contents);
 		}
 
+	}
+
+	private void patchInfoPListFile(File contents) {
+		File infoPListFile = new File(contents, "Info.plist");
+		if (infoPListFile.exists()) {
+			try {
+				DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
+				Document document = builder.parse(infoPListFile);
+				if (document == null) {
+					return;
+				}
+				XPath xPath = XPathFactory.newInstance().newXPath();
+				Node capable = (Node) xPath.compile("/plist/dict/key[contains(text(),'NSHighResolutionCapable')]").evaluate(
+						document,
+						XPathConstants.NODE);
+				if (capable == null) {
+					// No high resolution capable is set, so let's set it.
+					Node dict = (Node) xPath.compile("/plist/dict[last()]").evaluate(document,
+							XPathConstants.NODE);
+					Element nshrc = document.createElement("key");
+					nshrc.setTextContent("NSHighResolutionCapable");
+					Element trueValue = document.createElement("true");
+					dict.appendChild(nshrc);
+					dict.appendChild(trueValue);
+
+					// Store document back to file
+					TransformerFactory tFactory =
+							TransformerFactory.newInstance();
+					Transformer transformer = tFactory.newTransformer();
+
+					DOMSource source = new DOMSource(document);
+					StreamResult result = new StreamResult(infoPListFile);
+					transformer.transform(source, result);
+				}
+
+			} catch (Exception e) {
+				getLog().error(e);
+			}
+		}
 	}
 
 	private void patchIniFile(String productDirName, File launcherFile,
@@ -123,7 +176,7 @@ public class MyMojo extends AbstractMojo {
 			}
 			patched.append(contents);
 			FileUtils.fileWrite(iniFile, patched.toString());
-			if(getLog().isInfoEnabled()) {
+			if (getLog().isInfoEnabled()) {
 				getLog().info("Patched " + iniFile.getCanonicalPath());
 			}
 
