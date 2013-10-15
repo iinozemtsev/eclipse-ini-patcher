@@ -1,0 +1,59 @@
+This small maven plugin contains two enhancements for Eclipse RCP builds for Mac OS X:
+- Updates =Info.plist= file to add Retina support
+- Adds missing "-startup" parameter in =eclipse.ini= file during publishing product using p2. As a result, some important p2 operations, such as updates, fail in resulting RCPs.
+
+The plugin itslef provide a single goal 'patch-ini-file' and has no configuration at all - instead it relies on configuration of =org.sonatype.tycho:tycho-p2-director-plugin=.
+
+To use it, modify your pom so that 'patch-ini-file' goal is executed between =materialize-products= and =publish-products= goals of of =tycho-p2-director-plugin=.
+
+Example build element from POM:
+
+#+BEGIN_SRC xml
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>${tycho-groupid}</groupId>
+        <artifactId>tycho-p2-director-plugin</artifactId>
+        <version>${tycho-version}</version>
+        <executions>
+          <execution>
+            <id>materialize-products</id>
+            <phase>package</phase>
+            <goals>
+              <goal>materialize-products</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>archive-products</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>archive-products</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <products>
+            <product>
+              <id>com.xored.q7.cloud.server.product</id>
+            </product>
+          </products>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>com.xored.tycho</groupId>
+        <artifactId>eclipse-ini-patcher</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+        <executions>
+          <execution>
+            <id>materialize-products</id>
+            <phase>package</phase>
+            <goals>
+              <goal>patch-ini-file</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+#+END_SRC
+Here the *materialize-products* goal is moved to *verify* stage (instead of *package* stage by default) so that I can insert my goal before it. However probably there's another way to specify the desired execution order.
