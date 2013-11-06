@@ -1,6 +1,6 @@
 This small maven plugin contains two enhancements for Eclipse RCP builds for Mac OS X:
 - Updates =Info.plist= file to add Retina support
-- Adds missing "-startup" parameter in =eclipse.ini= file during publishing product using p2. As a result, some important p2 operations, such as updates, fail in resulting RCPs.
+- Adds missing "-startup" parameter in =eclipse.ini= file during publishing product using p2. Without this arg some important p2 operations, such as updates, fail in resulting RCPs.
 
 The plugin itslef provide a single goal 'patch-ini-file' and has no configuration at all - instead it relies on configuration of =org.sonatype.tycho:tycho-p2-director-plugin=.
 
